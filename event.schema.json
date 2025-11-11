@@ -1,0 +1,51 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "FSAMP Event",
+  "description": "Schema for events related to file processing in the FSAMP platform.",
+  "type": "object",
+  "properties": {
+    "eventId": {
+      "description": "Unique identifier for the event, compliant with UUID format.",
+      "type": "string",
+      "format": "uuid"
+    },
+    "filename": {
+      "description": "The original name of the uploaded file.",
+      "type": "string"
+    },
+    "fileSizeBytes": {
+      "description": "Size of the file in bytes.",
+      "type": "integer",
+      "minimum": 0
+    },
+    "timestamp": {
+      "description": "ISO 8601 timestamp (UTC) of when the event occurred.",
+      "type": "string",
+      "format": "date-time"
+    },
+    "status": {
+      "description": "The status of the event.",
+      "type": "string",
+      "enum": [
+        "UPLOADED",
+        "PROCESSING",
+        "COMPLETED",
+        "FAILED"
+      ]
+    },
+    "attributes": {
+      "description": "A map of additional key-value attributes for metadata.",
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      }
+    }
+  },
+  "required": [
+    "eventId",
+    "filename",
+    "fileSizeBytes",
+    "timestamp",
+    "status"
+  ]
+}

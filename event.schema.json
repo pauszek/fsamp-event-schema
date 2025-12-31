@@ -1,51 +1,109 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "FSAMP Event",
-  "description": "Schema for events related to file processing in the FSAMP platform.",
+  "title": "FSAMP Secure Event",
+  "description": "Standard event definition for FSAMP platform file processing flow.",
   "type": "object",
+  "additionalProperties": false,
   "properties": {
     "eventId": {
-      "description": "Unique identifier for the event, compliant with UUID format.",
+      "description": "Unique identifier for the event (UUID format).",
       "type": "string",
       "format": "uuid"
     },
-    "filename": {
-      "description": "The original name of the uploaded file.",
-      "type": "string"
-    },
-    "fileSizeBytes": {
-      "description": "Size of the file in bytes.",
-      "type": "integer",
-      "minimum": 0
+    "correlationId": {
+      "description": "Trace ID used to track the request across microservices.",
+      "type": "string",
+      "minLength": 1
     },
     "timestamp": {
-      "description": "ISO 8601 timestamp (UTC) of when the event occurred.",
+      "description": "Event occurrence timestamp (ISO 8601 UTC).",
       "type": "string",
       "format": "date-time"
     },
-    "status": {
-      "description": "The status of the event.",
+    "eventType": {
+      "description": "Discriminator for the type of event action.",
       "type": "string",
       "enum": [
-        "UPLOADED",
-        "PROCESSING",
-        "COMPLETED",
-        "FAILED"
+        "FILE_UPLOADED",
+        "FILE_SCANNED",
+        "ANALYSIS_COMPLETED",
+        "PROCESSING_FAILED"
       ]
     },
-    "attributes": {
-      "description": "A map of additional key-value attributes for metadata.",
+    "fileMetadata": {
       "type": "object",
-      "additionalProperties": {
-        "type": "string"
-      }
+      "description": "Business metadata regarding the processed file.",
+      "properties": {
+        "originalFilename": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 255
+        },
+        "fileSizeBytes": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "mimeType": {
+          "type": "string",
+          "example": "application/pdf"
+        }
+      },
+      "required": [
+        "originalFilename",
+        "fileSizeBytes"
+      ]
+    },
+    "storageLocation": {
+      "type": "object",
+      "description": "Pointer to the physical storage location (Claim-Check Pattern).",
+      "properties": {
+        "bucketName": {
+          "type": "string",
+          "minLength": 1
+        },
+        "objectKey": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "bucketName",
+        "objectKey"
+      ]
+    },
+    "securityContext": {
+      "type": "object",
+      "description": "Cryptographic metadata required for FIPS 140-3 compliance.",
+      "properties": {
+        "isEncrypted": {
+          "type": "boolean",
+          "default": true
+        },
+        "encryptionAlgorithm": {
+          "type": "string",
+          "enum": [
+            "AES/GCM/NoPadding",
+            "AES/CBC/PKCS5Padding"
+          ],
+          "description": "FIPS-compliant algorithm used for payload encryption."
+        },
+        "kmsKeyId": {
+          "type": "string",
+          "description": "ARN of the AWS KMS key used for envelope encryption.",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "isEncrypted"
+      ]
     }
   },
   "required": [
     "eventId",
-    "filename",
-    "fileSizeBytes",
     "timestamp",
-    "status"
+    "eventType",
+    "fileMetadata",
+    "storageLocation",
+    "securityContext"
   ]
 }

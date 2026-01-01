@@ -100,6 +100,7 @@
   },
   "required": [
     "eventId",
+    "correlationId",
     "timestamp",
     "eventType",
     "fileMetadata",

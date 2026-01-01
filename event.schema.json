@@ -1,24 +1,40 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/pauszek/fsamp-event-schema/event.schema.json",
   "title": "FSAMP Secure Event",
-  "description": "Standard event definition for FSAMP platform file processing flow.",
+  "description": "Standard event definition for FSAMP platform file processing flow. Compliant with FIPS 140-3 cryptographic requirements.",
   "type": "object",
   "additionalProperties": false,
   "properties": {
-    "eventId": {
-      "description": "Unique identifier for the event (UUID format).",
+    "schemaVersion": {
+      "description": "Version of this schema for forward compatibility.",
       "type": "string",
-      "format": "uuid"
+      "const": "1.0.0"
+    },
+    "eventId": {
+      "description": "Unique identifier for the event (UUID v4 format).",
+      "type": "string",
+      "format": "uuid",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
     },
     "correlationId": {
-      "description": "Trace ID used to track the request across microservices.",
+      "description": "Trace ID used to track the request across microservices (UUID v4 format).",
       "type": "string",
-      "minLength": 1
+      "format": "uuid",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
     },
     "timestamp": {
       "description": "Event occurrence timestamp (ISO 8601 UTC).",
       "type": "string",
       "format": "date-time"
+    },
+    "source": {
+      "description": "Identifier of the service that produced this event.",
+      "type": "string",
+      "enum": [
+        "fsamp-gateway",
+        "fsamp-processor"
+      ]
     },
     "eventType": {
       "description": "Discriminator for the type of event action.",
@@ -33,37 +49,60 @@
     "fileMetadata": {
       "type": "object",
       "description": "Business metadata regarding the processed file.",
+      "additionalProperties": false,
       "properties": {
         "originalFilename": {
+          "description": "Original name of the uploaded file.",
           "type": "string",
           "minLength": 1,
-          "maxLength": 255
+          "maxLength": 255,
+          "pattern": "^[^<>:\"/\\\\|?*\\x00-\\x1f]+$"
         },
         "fileSizeBytes": {
+          "description": "Size of the file in bytes.",
           "type": "integer",
-          "minimum": 0
+          "minimum": 0,
+          "maximum": 104857600
         },
         "mimeType": {
+          "description": "MIME type of the file content.",
           "type": "string",
-          "example": "application/pdf"
+          "pattern": "^[a-z]+/[a-z0-9.+-]+$"
+        },
+        "checksumSHA256": {
+          "description": "SHA-256 hash of file content for integrity verification (FIPS 180-4).",
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
         }
       },
       "required": [
         "originalFilename",
-        "fileSizeBytes"
+        "fileSizeBytes",
+        "checksumSHA256"
       ]
     },
     "storageLocation": {
       "type": "object",
       "description": "Pointer to the physical storage location (Claim-Check Pattern).",
+      "additionalProperties": false,
       "properties": {
         "bucketName": {
+          "description": "Name of the S3 bucket.",
           "type": "string",
-          "minLength": 1
+          "minLength": 3,
+          "maxLength": 63,
+          "pattern": "^[a-z0-9][a-z0-9.-]*[a-z0-9]$"
         },
         "objectKey": {
+          "description": "S3 object key (path) within the bucket.",
           "type": "string",
-          "minLength": 1
+          "minLength": 1,
+          "maxLength": 1024
+        },
+        "region": {
+          "description": "AWS region where the bucket is located.",
+          "type": "string",
+          "pattern": "^[a-z]{2}-[a-z]+-\\d$"
         }
       },
       "required": [
@@ -74,34 +113,37 @@
     "securityContext": {
       "type": "object",
       "description": "Cryptographic metadata required for FIPS 140-3 compliance.",
+      "additionalProperties": false,
       "properties": {
         "isEncrypted": {
+          "description": "Whether the file is encrypted at rest.",
           "type": "boolean",
-          "default": true
+          "const": true
         },
         "encryptionAlgorithm": {
+          "description": "FIPS 140-3 compliant encryption algorithm. Only AES-256-GCM is permitted (NIST SP 800-38D).",
           "type": "string",
-          "enum": [
-            "AES/GCM/NoPadding",
-            "AES/CBC/PKCS5Padding"
-          ],
-          "description": "FIPS-compliant algorithm used for payload encryption."
+          "const": "AES/GCM/NoPadding"
         },
         "kmsKeyId": {
-          "type": "string",
           "description": "ARN of the AWS KMS key used for envelope encryption.",
-          "minLength": 1
+          "type": "string",
+          "pattern": "^arn:aws:kms:[a-z0-9-]+:\\d{12}:key/[a-f0-9-]{36}$"
         }
       },
       "required": [
-        "isEncrypted"
+        "isEncrypted",
+        "encryptionAlgorithm",
+        "kmsKeyId"
       ]
     }
   },
   "required": [
+    "schemaVersion",
     "eventId",
     "correlationId",
     "timestamp",
+    "source",
     "eventType",
     "fileMetadata",
     "storageLocation",

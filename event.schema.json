@@ -9,10 +9,16 @@
     "schemaVersion": {
       "description": "Version of this schema for forward compatibility.",
       "type": "string",
-      "const": "1.0.0"
+      "const": "1.1.0"
+    },
+    "fileId": {
+      "description": "Stable aggregate identifier for the file across all services (UUID v4 format).",
+      "type": "string",
+      "format": "uuid",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
     },
     "eventId": {
-      "description": "Unique identifier for the event (UUID v4 format).",
+      "description": "Unique identifier for this event occurrence (UUID v4 format).",
       "type": "string",
       "format": "uuid",
       "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
@@ -112,7 +118,7 @@
     },
     "securityContext": {
       "type": "object",
-      "description": "Cryptographic metadata required for FIPS 140-3 compliance.",
+      "description": "Cryptographic metadata required by the FSAMP FIPS 140-3-oriented security posture.",
       "additionalProperties": false,
       "properties": {
         "isEncrypted": {
@@ -121,7 +127,7 @@
           "const": true
         },
         "encryptionAlgorithm": {
-          "description": "FIPS 140-3 compliant encryption algorithm. Only AES-256-GCM is permitted (NIST SP 800-38D).",
+          "description": "FIPS 140-3-oriented encryption algorithm constraint. Only AES-256-GCM is permitted (NIST SP 800-38D).",
           "type": "string",
           "const": "AES/GCM/NoPadding"
         },
@@ -140,6 +146,7 @@
   },
   "required": [
     "schemaVersion",
+    "fileId",
     "eventId",
     "correlationId",
     "timestamp",

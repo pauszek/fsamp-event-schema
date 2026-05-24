@@ -2,7 +2,7 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://github.com/pauszek/fsamp-event-schema/event.schema.json",
   "title": "FSAMP Secure Event",
-  "description": "Standard event definition for FSAMP platform file processing flow. Compliant with FIPS 140-3 cryptographic requirements.",
+  "description": "Standard event definition for FSAMP platform file processing flow. FIPS 140-3-oriented cryptographic requirements.",
   "type": "object",
   "additionalProperties": false,
   "properties": {
@@ -134,7 +134,7 @@
         "kmsKeyId": {
           "description": "ARN of the AWS KMS key used for envelope encryption.",
           "type": "string",
-          "pattern": "^arn:aws:kms:[a-z0-9-]+:\\d{12}:key/[a-f0-9-]{36}$"
+          "pattern": "^arn:(aws|aws-us-gov):kms:[a-z0-9-]+:\\d{12}:key/[a-f0-9-]{36}$"
         }
       },
       "required": [

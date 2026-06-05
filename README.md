@@ -9,9 +9,9 @@
 
 This repository contains the canonical JSON Schema for FSAMP file events. Gateway and Processor validate against this contract before publishing or consuming events.
 
-## Schema Version 1.1.0
+## Schema Version 1.1.1
 
-Current schema version: **1.1.0**
+Current schema version: **1.1.1**
 
 ### FIPS 140-3-Oriented Contract Constraints
 
@@ -19,11 +19,11 @@ Current schema version: **1.1.0**
 - **Hashing**: SHA-256 checksums (FIPS 180-4)
 - **Key Management**: AWS KMS with ARN validation
 
-### Breaking Changes from pre-1.0
+### Breaking Changes from pre-1.1.1
 
-| Field | Before | v1.1.0 |
+| Field | Before | v1.1.1 |
 |-------|--------|--------|
-| `schemaVersion` | N/A | Required: `"1.1.0"` |
+| `schemaVersion` | N/A | Required: `"1.1.1"` |
 | `fileId` | N/A | Required aggregate UUID for the file |
 | `correlationId` | String | UUID format required |
 | `source` | N/A | Required: `fsamp-gateway` or `fsamp-processor` |
@@ -36,7 +36,7 @@ Current schema version: **1.1.0**
 
 ```json
 {
-  "schemaVersion": "1.1.0",
+  "schemaVersion": "1.1.1",
   "fileId": "uuid",
   "eventId": "uuid",
   "correlationId": "uuid",
@@ -90,7 +90,7 @@ The schema is distributed as a Maven artifact:
 <dependency>
     <groupId>io.github.pauszek</groupId>
     <artifactId>fsamp-event-schema</artifactId>
-    <version>1.1.0</version>
+    <version>1.1.1</version>
 </dependency>
 ```
 

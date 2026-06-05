@@ -1,0 +1,33 @@
+# Pre-commit hooks for fsamp-event-schema.
+# This repository owns the canonical FSAMP event contract and is the
+# upstream consumed by both gateway and processor through CI checkout.
+# Hooks focus on secret detection, JSON schema correctness, and basic
+# hygiene; a Java/Maven repo also benefits from pom-format checks.
+
+minimum_pre_commit_version: '3.5.0'
+
+repos:
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.22.0
+    hooks:
+      - id: gitleaks
+        name: detect-hardcoded-secrets
+
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: check-yaml
+      - id: check-json
+      - id: check-added-large-files
+        args: ['--maxkb=1024']
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
+      - id: mixed-line-ending
+        args: ['--fix=lf']
+
+  - repo: https://github.com/python-jsonschema/check-jsonschema
+    rev: 0.30.0
+    hooks:
+      - id: check-metaschema
+        files: ^event\.schema\.json$
+        name: validate-event-schema-against-metaschema

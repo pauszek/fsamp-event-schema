@@ -9,7 +9,7 @@
     "schemaVersion": {
       "description": "Version of this schema for forward compatibility.",
       "type": "string",
-      "const": "1.1.1"
+      "const": "1.1.2"
     },
     "fileId": {
       "description": "Stable aggregate identifier for the file across all services (UUID v4 format).",

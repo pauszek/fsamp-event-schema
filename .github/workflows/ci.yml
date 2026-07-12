@@ -7,7 +7,25 @@ on:
     branches: [ main ]
 
 jobs:
+  contract-tests:
+    name: Contract Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+
+      - name: Set up Java 21
+        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5.2.0
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+
+      - name: Validate, test and package contract
+        run: mvn -B -ntp clean verify
+
   call-lite:
-    uses: pauszek/fsamp-code-ci/.github/workflows/build-lite.yml@v0.0.79
+    needs: contract-tests
+    uses: pauszek/fsamp-code-ci/.github/workflows/build-lite.yml@3be5121f484722007182b432327f9a6a27d32458
     secrets:
       GABRBA_SECRET: ${{ secrets.GABRBA_SECRET }}

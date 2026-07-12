@@ -1,105 +1,112 @@
 # FSAMP Event Schema
 
 [![JSON Schema](https://img.shields.io/badge/JSON%20Schema-Draft--07-blue)](https://json-schema.org/)
-[![FIPS 140-3](https://img.shields.io/badge/FIPS-140--3-green)](https://csrc.nist.gov/publications/detail/fips/140/3/final)
+[![FIPS 140-3](https://img.shields.io/badge/FIPS-140--3--oriented-green)](https://csrc.nist.gov/publications/detail/fips/140/3/final)
 
-> Canonical event schema for the FSAMP platform - the single source of truth for event contracts.
+Canonical event contract for the FSAMP file-processing flow. Contract and artifact versions are kept in lockstep; the current version is **1.2.0**.
 
-## Overview
+## Event types
 
-This repository contains the canonical JSON Schema for FSAMP file events. Gateway and Processor validate against this contract before publishing or consuming events.
+Every event contains the common envelope and file context:
 
-## Schema Version 1.1.2
+- `schemaVersion`, `fileId`, `eventId`, `correlationId`, `timestamp`
+- `source`, `eventType`
+- `fileMetadata`, `storageLocation`, `securityContext`
 
-Current schema version: **1.1.2**
+Producer and payload semantics are enforced by JSON Schema:
 
-### FIPS 140-3-Oriented Contract Constraints
+| Event type | Producer | Additional payload |
+|---|---|---|
+| `FILE_UPLOADED` | `fsamp-gateway` | none |
+| `FILE_SCANNED` | `fsamp-processor` | none |
+| `ANALYSIS_COMPLETED` | `fsamp-processor` | required `processingResult` |
+| `PROCESSING_FAILED` | `fsamp-processor` | required `failure` |
 
-- **Encryption**: Only AES-256-GCM (NIST SP 800-38D AEAD)
-- **Hashing**: SHA-256 checksums (FIPS 180-4)
-- **Key Management**: AWS KMS with ARN validation
+`fileId` and `correlationId` are UUID v4. `eventId` may be UUID v4 or deterministic UUID v5. Timestamps are UTC. KMS key ARNs accept standard and multi-Region (`mrk-...`) keys; aliases are intentionally rejected from published events.
 
-### Breaking Changes from pre-1.1.0
-
-| Field | Before | v1.1.2 |
-|-------|--------|--------|
-| `schemaVersion` | N/A | Required: `"1.1.2"` |
-| `fileId` | N/A | Required aggregate UUID for the file |
-| `correlationId` | String | UUID format required |
-| `source` | N/A | Required: `fsamp-gateway` or `fsamp-processor` |
-| `encryptionAlgorithm` | `AES-GCM` or `AES-CBC` | Only `AES/GCM/NoPadding` |
-| `isEncrypted` | Boolean | Always `true` |
-| `kmsKeyId` | Optional | Required with ARN pattern |
-| `checksumSHA256` | N/A | Required (64 hex chars) |
-
-## Schema Structure
+### Completed analysis
 
 ```json
 {
-  "schemaVersion": "1.1.2",
-  "fileId": "uuid",
-  "eventId": "uuid",
-  "correlationId": "uuid",
-  "timestamp": "ISO-8601",
-  "source": "fsamp-gateway | fsamp-processor",
-  "eventType": "FILE_UPLOADED | FILE_SCANNED | ANALYSIS_COMPLETED",
+  "schemaVersion": "1.2.0",
+  "fileId": "550e8400-e29b-41d4-a716-446655440000",
+  "eventId": "f47ac10b-58cc-5372-a567-0e02b2c3d479",
+  "correlationId": "9b2c9fa4-8d5d-4f75-8de8-86335fcd4621",
+  "timestamp": "2026-07-11T10:02:00Z",
+  "source": "fsamp-processor",
+  "eventType": "ANALYSIS_COMPLETED",
   "fileMetadata": {
-    "originalFilename": "string",
-    "mimeType": "string",
-    "fileSizeBytes": "number (max 100MB)",
-    "checksumSHA256": "64 hex chars"
+    "originalFilename": "document.pdf",
+    "fileSizeBytes": 1024,
+    "mimeType": "application/pdf",
+    "checksumSHA256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
   },
   "storageLocation": {
-    "bucketName": "string (S3 naming)",
-    "objectKey": "string"
+    "bucketName": "fsamp-files",
+    "objectKey": "uploads/2026/07/document.pdf",
+    "region": "us-west-2"
   },
   "securityContext": {
     "isEncrypted": true,
     "encryptionAlgorithm": "AES/GCM/NoPadding",
-    "kmsKeyId": "arn:aws:kms:... or arn:aws-us-gov:kms:..."
+    "kmsKeyId": "arn:aws:kms:us-west-2:123456789012:key/mrk-1234567890abcdef1234567890abcdef"
+  },
+  "processingResult": {
+    "isSafe": true,
+    "findings": [],
+    "processedAt": "2026-07-11T10:02:00Z"
   }
 }
 ```
 
-## Contract Testing
+## Breaking changes in 1.2.0
 
-Both services implement contract tests validating against this schema:
+- Event type and producer combinations are now enforced.
+- Processor result and failure payloads have explicit shapes.
+- Processor output events carry the same file, storage and security context as input events.
+- `eventId` supports UUID v4 and v5; aggregate and correlation identifiers remain UUID v4.
+- Empty files, non-UTC timestamps and invalid S3 bucket names are rejected.
+- KMS multi-Region key ARNs are supported.
 
-| Service | Framework |
-|---------|-----------|
-| fsamp-gateway (Java) | JUnit 5 + networknt/json-schema-validator |
-| fsamp-processor (Python) | pytest + jsonschema |
-
-### Running Tests
+## Validation
 
 ```bash
-# Java (Gateway)
-cd ../fsamp-gateway
-./mvnw test -Dtest=EventSchemaContractTest
-
-# Python (Processor)
-cd ../fsamp-processor
-pytest tests/contract/ -v
+mvn -B -ntp clean verify
+pre-commit run --all-files
 ```
 
-## Distribution
+Gateway and processor must also validate their actual serialized producer models against this file before publishing.
 
-The schema is distributed as a Maven artifact:
+## Maven distribution
+
+The primary artifact is a JAR containing `/event.schema.json` and `/LICENSE`:
 
 ```xml
 <dependency>
     <groupId>io.github.pauszek</groupId>
     <artifactId>fsamp-event-schema</artifactId>
-    <version>1.1.2</version>
+    <version>1.2.0</version>
 </dependency>
 ```
 
-## Related Repositories
+For non-JVM consumers, the same release also attaches a ZIP:
 
-- [fsamp-gateway](https://github.com/pauszek/fsamp-gateway) - Java Spring Boot file upload service
-- [fsamp-processor](https://github.com/pauszek/fsamp-processor) - Python Lambda event processor
-- [fsamp-infra](https://github.com/pauszek/fsamp-infra) - Terraform infrastructure
+```xml
+<dependency>
+    <groupId>io.github.pauszek</groupId>
+    <artifactId>fsamp-event-schema</artifactId>
+    <version>1.2.0</version>
+    <type>zip</type>
+    <classifier>schema</classifier>
+</dependency>
+```
+
+## Related repositories
+
+- [fsamp-gateway](https://github.com/pauszek/fsamp-gateway)
+- [fsamp-processor](https://github.com/pauszek/fsamp-processor)
+- [fsamp-infra](https://github.com/pauszek/fsamp-infra)
 
 ## License
 
-MIT
+MIT. See [LICENSE](LICENSE).

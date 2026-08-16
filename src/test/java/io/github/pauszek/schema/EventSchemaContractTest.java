@@ -174,16 +174,19 @@ class EventSchemaContractTest {
 
         assertEquals(contractVersion, pomVersion,
                 "The POM packages the canonical contract version");
-        assertTrue(releaseVersion.compareTo(contractVersion) >= 0,
-                "The repository release must not predate the packaged contract");
+        assertTrue(releaseVersion.isPatchCompatibleWith(contractVersion),
+                "The repository release must keep the contract major/minor and not decrease its patch");
     }
 
     @Test
-    void acceptsPatchReleaseWithoutChangingTheContract() {
+    void acceptsOnlyPatchCompatibleReleaseWithoutChangingTheContract() {
         SemanticVersion contractVersion = SemanticVersion.parse("1.2.0");
-        SemanticVersion releaseVersion = SemanticVersion.parse("1.2.1");
 
-        assertTrue(releaseVersion.compareTo(contractVersion) > 0);
+        assertTrue(SemanticVersion.parse("1.2.0").isPatchCompatibleWith(contractVersion));
+        assertTrue(SemanticVersion.parse("1.2.1").isPatchCompatibleWith(contractVersion));
+        assertFalse(SemanticVersion.parse("1.1.9").isPatchCompatibleWith(contractVersion));
+        assertFalse(SemanticVersion.parse("1.3.0").isPatchCompatibleWith(contractVersion));
+        assertFalse(SemanticVersion.parse("2.0.0").isPatchCompatibleWith(contractVersion));
     }
 
     private static String pomRevision() throws IOException {
@@ -246,8 +249,7 @@ class EventSchemaContractTest {
         assertFalse(schema.validate(event).isEmpty(), "Expected schema validation to fail");
     }
 
-    private record SemanticVersion(int major, int minor, int patch)
-            implements Comparable<SemanticVersion> {
+    private record SemanticVersion(int major, int minor, int patch) {
 
         private static final Pattern FORMAT = Pattern.compile("(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)");
 
@@ -261,14 +263,10 @@ class EventSchemaContractTest {
             );
         }
 
-        @Override
-        public int compareTo(SemanticVersion other) {
-            int majorComparison = Integer.compare(major, other.major);
-            if (majorComparison != 0) {
-                return majorComparison;
-            }
-            int minorComparison = Integer.compare(minor, other.minor);
-            return minorComparison != 0 ? minorComparison : Integer.compare(patch, other.patch);
+        private boolean isPatchCompatibleWith(SemanticVersion contractVersion) {
+            return major == contractVersion.major
+                    && minor == contractVersion.minor
+                    && patch >= contractVersion.patch;
         }
     }
 }

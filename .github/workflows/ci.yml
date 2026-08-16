@@ -26,6 +26,6 @@ jobs:
 
   call-lite:
     needs: contract-tests
-    uses: pauszek/fsamp-code-ci/.github/workflows/build-lite.yml@d4d2ae644680e0b08834468031f335084688b59a
+    uses: pauszek/fsamp-code-ci/.github/workflows/build-lite.yml@fd553ff9598c1d8548cb808b15b967c1610ccfc4
     secrets:
       GABRBA_SECRET: ${{ secrets.GABRBA_SECRET }}

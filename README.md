@@ -3,7 +3,7 @@
 [![JSON Schema](https://img.shields.io/badge/JSON%20Schema-Draft--07-blue)](https://json-schema.org/)
 [![FIPS 140-3](https://img.shields.io/badge/FIPS-140--3--oriented-green)](https://csrc.nist.gov/publications/detail/fips/140/3/final)
 
-Canonical event contract for the FSAMP file-processing flow. Contract and artifact versions are kept in lockstep; the current version is **1.2.0**.
+Canonical event contract for the FSAMP file-processing flow. The JSON contract and packaged schema use version **1.2.0**. Repository releases may use a newer patch version (for example **1.2.1**) when the packaged contract is unchanged; such a release remains wire-compatible with contract `1.2.0`.
 
 ## Event types
 

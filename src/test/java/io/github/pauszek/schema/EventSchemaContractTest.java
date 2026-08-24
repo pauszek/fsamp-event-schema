@@ -13,6 +13,8 @@ import org.junit.jupiter.api.Test;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -22,6 +24,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class EventSchemaContractTest {
 
     private static final ObjectMapper MAPPER = new ObjectMapper();
+    private static final Pattern POM_REVISION = Pattern.compile("<revision>([^<]+)</revision>");
     private static JsonSchema schema;
 
     @BeforeAll
@@ -159,11 +162,37 @@ class EventSchemaContractTest {
     }
 
     @Test
-    void keepsArtifactAndContractVersionsAligned() throws Exception {
+    void keepsContractVersionAlignedAndReleaseVersionCompatible() throws Exception {
         JsonNode document = MAPPER.readTree(Path.of("event.schema.json").toFile());
-        assertEquals("1.2.0", document.at("/properties/schemaVersion/const").asText());
-        assertEquals("1.2.0", Files.readString(Path.of("release.version")).trim());
-        assertTrue(Files.readString(Path.of("pom.xml")).contains("<revision>1.2.0</revision>"));
+        SemanticVersion contractVersion = SemanticVersion.parse(
+                document.at("/properties/schemaVersion/const").asText()
+        );
+        SemanticVersion pomVersion = SemanticVersion.parse(pomRevision());
+        SemanticVersion releaseVersion = SemanticVersion.parse(
+                Files.readString(Path.of("release.version")).trim()
+        );
+
+        assertEquals(contractVersion, pomVersion,
+                "The POM packages the canonical contract version");
+        assertTrue(releaseVersion.isPatchCompatibleWith(contractVersion),
+                "The repository release must keep the contract major/minor and not decrease its patch");
+    }
+
+    @Test
+    void acceptsOnlyPatchCompatibleReleaseWithoutChangingTheContract() {
+        SemanticVersion contractVersion = SemanticVersion.parse("1.2.0");
+
+        assertTrue(SemanticVersion.parse("1.2.0").isPatchCompatibleWith(contractVersion));
+        assertTrue(SemanticVersion.parse("1.2.1").isPatchCompatibleWith(contractVersion));
+        assertFalse(SemanticVersion.parse("1.1.9").isPatchCompatibleWith(contractVersion));
+        assertFalse(SemanticVersion.parse("1.3.0").isPatchCompatibleWith(contractVersion));
+        assertFalse(SemanticVersion.parse("2.0.0").isPatchCompatibleWith(contractVersion));
+    }
+
+    private static String pomRevision() throws IOException {
+        Matcher matcher = POM_REVISION.matcher(Files.readString(Path.of("pom.xml")));
+        assertTrue(matcher.find(), "pom.xml must declare a revision");
+        return matcher.group(1).trim();
     }
 
     private static ObjectNode baseEvent(String eventType, String source) throws Exception {
@@ -218,5 +247,26 @@ class EventSchemaContractTest {
 
     private static void assertInvalid(JsonNode event) {
         assertFalse(schema.validate(event).isEmpty(), "Expected schema validation to fail");
+    }
+
+    private record SemanticVersion(int major, int minor, int patch) {
+
+        private static final Pattern FORMAT = Pattern.compile("(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)");
+
+        private static SemanticVersion parse(String value) {
+            Matcher matcher = FORMAT.matcher(value);
+            assertTrue(matcher.matches(), () -> "Expected semantic version, got: " + value);
+            return new SemanticVersion(
+                    Integer.parseInt(matcher.group(1)),
+                    Integer.parseInt(matcher.group(2)),
+                    Integer.parseInt(matcher.group(3))
+            );
+        }
+
+        private boolean isPatchCompatibleWith(SemanticVersion contractVersion) {
+            return major == contractVersion.major
+                    && minor == contractVersion.minor
+                    && patch >= contractVersion.patch;
+        }
     }
 }
